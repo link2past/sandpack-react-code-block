@@ -4,18 +4,19 @@ import Markdown from "markdown-to-jsx";
 import { SandpackProvider } from "@codesandbox/sandpack-react";
 
 import {
-  ResponsiveLayout,
   TopRow,
-  StyledFileExplorer,
-  StyledCodeEditor,
-  StyledPreview,
-  ConsoleContainer,
-  ConsoleHeader,
   ConsoleTitle,
+  ConsoleHeader,
   ConsoleToggle,
-  ConsoleContent,
+  StyledPreview,
   StyledConsole,
-  ContainerDiv,
+  ConsoleContent,
+  StyledCodeEditor,
+  ConsoleContainer,
+  SandpackContainer,
+  StyledFileExplorer,
+  StyledSandpackLayout,
+  StyledPreviewContainer,
 } from "./StyledComponents";
 
 const markdown = `
@@ -145,131 +146,135 @@ export default function App() {
 
 const ReactCodeBlock = () => {
   return (
-    <>
-      <Markdown
-        options={{
-          overrides: {
-            ReactCodeBlock: ({ children, ...props }) => {
-              const attributes = props;
-              console.log(attributes);
-              const files = {};
-              const [consoleExpanded, setConsoleExpanded] =
-                React.useState(false);
+    <Markdown
+      options={{
+        overrides: {
+          ReactCodeBlock: ({ children, ...props }) => {
+            const attributes = props;
 
-              const toggleConsole = () => {
-                setConsoleExpanded(!consoleExpanded);
-              };
+            const files = {};
+            const [consoleExpanded, setConsoleExpanded] = React.useState(false);
 
-              React.Children.forEach(children, (child) => {
-                if (typeof child === "string") return;
+            const toggleConsole = () => {
+              setConsoleExpanded(!consoleExpanded);
+            };
 
-                if (child?.type === "file" && child?.props?.name) {
-                  const fileName = child.props.name;
+            React.Children.forEach(children, (child) => {
+              if (typeof child === "string") return;
 
-                  const preElement = React.Children.toArray(
-                    child.props.children
-                  ).find((c) => c?.type === "pre");
+              if (child?.type === "file" && child?.props?.name) {
+                const fileName = child.props.name;
 
-                  if (preElement) {
-                    const codeElement = React.Children.toArray(
-                      preElement.props.children
-                    ).find((c) => c?.type === "code");
+                const preElement = React.Children.toArray(
+                  child.props.children
+                ).find((c) => c?.type === "pre");
 
-                    if (codeElement) {
-                      files[`/${fileName}`] = codeElement.props.children;
-                    }
+                if (preElement) {
+                  const codeElement = React.Children.toArray(
+                    preElement.props.children
+                  ).find((c) => c?.type === "code");
+
+                  if (codeElement) {
+                    files[`/${fileName}`] = codeElement.props.children;
                   }
                 }
-              });
+              }
+            });
 
-              // Calculate visibility conditions
-              const hideFileExplorer =
-                attributes.shouldShowFileExplorer === false;
-              const hideEditor = attributes.shouldShowEditor === false;
-              const hidePreview = attributes.shouldShowPreview === false;
-              const hideConsole = attributes.shouldShowConsole === false;
-              const hideTopRow = hideFileExplorer && hideEditor;
-              const showPreviewFullWidth = hideFileExplorer && hideEditor;
+            // Calculate visibility conditions
+            const hideFileExplorer =
+              attributes.shouldShowFileExplorer === false;
+            const hideEditor = attributes.shouldShowEditor === false;
+            const hidePreview = attributes.shouldShowPreview === false;
+            const hideConsole = attributes.shouldShowConsole === false;
+            const hideTopRow = hideFileExplorer && hideEditor;
+            const showPreviewFullWidth = hideFileExplorer && hideEditor;
 
-              return (
-                <ContainerDiv
-                  height={attributes.height}
-                  width={attributes.width}
+            return (
+              <SandpackContainer
+                height={attributes.height}
+                width={attributes.width}
+              >
+                <SandpackProvider
+                  template="react"
+                  theme={attributes.theme || "dark"}
+                  options={{
+                    activeFile: attributes.activeFile || "App.js",
+                  }}
+                  customSetup={{
+                    dependencies: JSON.parse(attributes.dependencies),
+                  }}
+                  files={files}
                 >
-                  <SandpackProvider
-                    template="react"
-                    theme={attributes.theme || "dark"}
-                    options={{
-                      activeFile: attributes.activeFile || "App.js",
-                    }}
-                    customSetup={{
-                      dependencies: JSON.parse(attributes.dependencies),
-                    }}
-                    files={files}
+                  <StyledSandpackLayout
+                    height={attributes.height}
+                    width={attributes.width}
                   >
-                    <ResponsiveLayout
-                      height={attributes.height}
-                      width={attributes.width}
-                    >
-                      {(attributes.shouldShowFileExplorer !== false ||
-                        attributes.shouldShowEditor !== false) && (
-                        <TopRow hidden={hideTopRow} fullWidth={hidePreview}>
-                          {attributes.shouldShowFileExplorer !== false && (
-                            <StyledFileExplorer
-                              hidden={hideFileExplorer}
-                              initialCollapsedFolder={["/src"]}
-                            />
-                          )}
-                          {attributes.shouldShowEditor !== false && (
-                            <StyledCodeEditor
-                              hidden={hideEditor}
-                              readOnly={attributes.readOnly}
-                              showReadOnly={attributes.showReadOnly}
-                              showTabs={attributes.showTabs}
-                              closableTabs={attributes.closableTabs}
-                              showLineNumbers={attributes.showLineNumbers}
-                              showInlineErrors={attributes.showInlineErrors}
-                              showRunButton={attributes.showRunButton}
-                            />
-                          )}
-                        </TopRow>
-                      )}
+                    {(attributes.shouldShowFileExplorer !== false ||
+                      attributes.shouldShowEditor !== false) && (
+                      <TopRow
+                        hidden={hideTopRow}
+                        fullWidth={hidePreview}
+                        hidePreview={hidePreview}
+                      >
+                        {attributes.shouldShowFileExplorer !== false && (
+                          <StyledFileExplorer
+                            hidden={hideFileExplorer}
+                            initialCollapsedFolder={["/src"]}
+                          />
+                        )}
+                        {attributes.shouldShowEditor !== false && (
+                          <StyledCodeEditor
+                            hidden={hideEditor}
+                            readOnly={attributes.readOnly}
+                            showReadOnly={attributes.showReadOnly}
+                            showTabs={attributes.showTabs}
+                            closableTabs={attributes.closableTabs}
+                            showLineNumbers={attributes.showLineNumbers}
+                            showInlineErrors={attributes.showInlineErrors}
+                            showRunButton={attributes.showRunButton}
+                          />
+                        )}
+                      </TopRow>
+                    )}
 
-                      {attributes.shouldShowPreview !== false && (
+                    {attributes.shouldShowPreview !== false && (
+                      <StyledPreviewContainer
+                        hidden={hidePreview}
+                        fullwidth={showPreviewFullWidth}
+                      >
                         <StyledPreview
-                          hidden={hidePreview}
-                          fullWidth={showPreviewFullWidth}
+                          hideconsole={hideConsole}
                           showNavigator={attributes.showNavigator}
                           showOpenInCodeSandbox={
                             attributes.showOpenInCodeSandbox
                           }
-                        >
-                          {attributes.shouldShowConsole !== false && (
-                            <ConsoleContainer expanded={consoleExpanded}>
-                              <ConsoleHeader onClick={toggleConsole}>
-                                <ConsoleTitle>Console</ConsoleTitle>
-                                <ConsoleToggle>
-                                  {consoleExpanded ? "▼" : "▲"}
-                                </ConsoleToggle>
-                              </ConsoleHeader>
-                              <ConsoleContent>
-                                <StyledConsole />
-                              </ConsoleContent>
-                            </ConsoleContainer>
-                          )}
-                        </StyledPreview>
-                      )}
-                    </ResponsiveLayout>
-                  </SandpackProvider>
-                </ContainerDiv>
-              );
-            },
+                        />
+                        {attributes.shouldShowConsole !== false && (
+                          <ConsoleContainer expanded={consoleExpanded}>
+                            <ConsoleHeader onClick={toggleConsole}>
+                              <ConsoleTitle>Console</ConsoleTitle>
+                              <ConsoleToggle>
+                                {consoleExpanded ? "▼" : "▲"}
+                              </ConsoleToggle>
+                            </ConsoleHeader>
+                            <ConsoleContent>
+                              <StyledConsole />
+                            </ConsoleContent>
+                          </ConsoleContainer>
+                        )}
+                      </StyledPreviewContainer>
+                    )}
+                  </StyledSandpackLayout>
+                </SandpackProvider>
+              </SandpackContainer>
+            );
           },
-        }}
-      >
-        {markdown}
-      </Markdown>
-    </>
+        },
+      }}
+    >
+      {markdown}
+    </Markdown>
   );
 };
 
