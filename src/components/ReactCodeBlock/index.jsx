@@ -11,7 +11,7 @@ import {
 } from "@codesandbox/sandpack-react";
 
 const markdown = `
-<ReactCodeBlock height="95vh" width="100%" theme="dark" activeFile="App.js" readOnly="false" dependencies={{"react-router-dom": "6.20.1", "markdown-to-jsx": "^6.11.4"}} showReadOnly="false" showTabs="true" closableTabs="true" showLineNumbers="true" showInlineErrors="true" showRunButton="true" showNavigator="true" showOpenInCodeSandbox="false">
+<ReactCodeBlock showConsole="true" showEditor="true" showPreview="true" showFileExplorer="true" height="95vh" width="100%" theme="dark" activeFile="App.js" readOnly="false" dependencies={{"react-router-dom": "6.20.1", "markdown-to-jsx": "^6.11.4"}} showReadOnly="false" showTabs="true" closableTabs="true" showLineNumbers="true" showInlineErrors="true" showRunButton="true" showNavigator="true" showOpenInCodeSandbox="false">
 <file name="App.js">
 \`\`\`jsx
 import React, { useEffect, useState } from "react";
@@ -142,7 +142,7 @@ const ReactCodeBlock = () => {
         overrides: {
           ReactCodeBlock: ({ children, ...props }) => {
             const attributes = props;
-
+            console.log(attributes);
             const files = {};
 
             React.Children.forEach(children, (child) => {
@@ -191,31 +191,41 @@ const ReactCodeBlock = () => {
                       width: attributes.width || "90vw",
                     }}
                   >
-                    <SandpackFileExplorer
-                      style={{ height: "100%", width: "100%" }}
-                      initialCollapsedFolder={["/src"]}
-                    />
-                    <SandpackCodeEditor
-                      style={{ height: "100%", width: "100%" }}
-                      readOnly={attributes.readOnly === true}
-                      showReadOnly={attributes.showReadOnly === true}
-                      showTabs={attributes.showTabs === true}
-                      closableTabs={attributes.closableTabs === true}
-                      showLineNumbers={attributes.showLineNumbers === true}
-                      showInlineErrors={attributes.showInlineErrors === true}
-                      showRunButton={attributes.showRunButton === true}
-                    />
-                    <SandpackPreview
-                      style={{ height: "100%", width: "100%" }}
-                      showNavigator={attributes.showNavigator === true}
-                      showOpenInCodeSandbox={
-                        attributes.showOpenInCodeSandbox === true
-                      }
-                    >
-                      <SandpackConsole
-                        style={{ height: "30%", width: "100%" }}
+                    {attributes.showFileExplorer && (
+                      <SandpackFileExplorer
+                        style={{ height: "100%", width: "100%" }}
+                        initialCollapsedFolder={["/src"]}
                       />
-                    </SandpackPreview>
+                    )}
+                    {attributes.showEditor && (
+                      <SandpackCodeEditor
+                        style={{ height: "100%", width: "100%" }}
+                        readOnly={attributes.readOnly}
+                        showReadOnly={attributes.showReadOnly}
+                        showTabs={attributes.showTabs}
+                        closableTabs={attributes.closableTabs}
+                        showLineNumbers={attributes.showLineNumbers}
+                        showInlineErrors={
+                          attributes.showInlineErrors
+                        }
+                        showRunButton={attributes.showRunButton}
+                      />
+                    )}
+                    {attributes.showPreview && (
+                      <SandpackPreview
+                        style={{ height: "100%", width: "100%" }}
+                        showNavigator={attributes.showNavigator}
+                        showOpenInCodeSandbox={
+                          attributes.showOpenInCodeSandbox
+                        }
+                      >
+                        {attributes.showConsole && (
+                          <SandpackConsole
+                            style={{ height: "30%", width: "100%" }}
+                          />
+                        )}
+                      </SandpackPreview>
+                    )}
                   </SandpackLayout>
                 </SandpackProvider>
               </div>
