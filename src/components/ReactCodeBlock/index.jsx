@@ -20,10 +20,11 @@ import {
 } from "./StyledComponents";
 
 const markdown = `
-<ReactCodeBlock shouldShowFileExplorer="true" shouldShowEditor="true" shouldShowPreview="true" shouldShowConsole="true" height="600px" width="100%" theme="dark" activeFile="App.js" readOnly="false" dependencies={{"react-router-dom": "6.20.1", "markdown-to-jsx": "^6.11.4"}} showReadOnly="false" showTabs="true" closableTabs="true" showLineNumbers="true" showInlineErrors="true" showRunButton="true" showNavigator="true" showOpenInCodeSandbox="false">
+<ReactCodeBlock shouldShowFileExplorer="true" shouldShowEditor="true" shouldShowPreview="true" shouldShowConsole="true" height="600px" width="100%" theme="dark" activeFile="App.js" readOnly="false" dependencies={{"react-router-dom": "6.20.1", "markdown-to-jsx": "^6.11.4","js-cookie":"3.0.5"}} showReadOnly="false" showTabs="true" closableTabs="true" showLineNumbers="true" showInlineErrors="true" showRunButton="true" showNavigator="true" showOpenInCodeSandbox="false">
 <file name="App.js">
 \`\`\`jsx
 import React, { useEffect, useState } from "react";
+import Cookies from "js-cookie";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 
 const Home = () => <h2>Home Page</h2>;
@@ -46,17 +47,20 @@ export default function App() {
       .catch((error) => console.error("Fetch Error:", error));
   }, []);
 
-  // Test Cookies Storage
-  const setCookie = () => {
-    document.cookie = "testCookie=HelloSandpack; path=/";
-    console.log("Cookie Set: testCookie=HelloSandpack");
-    checkCookies();
-  };
 
-  const checkCookies = () => {
-    const allCookies = document.cookie;
-    console.log("Current Cookies:", allCookies);
-    setCookieValue(allCookies);
+const [cookieCount, setCookieCount] = useState(1);
+  const setCookie = () => {
+    const cookieName = "myCookie" + cookieCount;
+    const cookieValue = "Value" + cookieCount;
+
+    Cookies.set(cookieName, cookieValue, {
+      expires: 1, // Expires in 1 day
+      path: "/",
+      sameSite: "None",
+      secure: true, // Required for SameSite=None
+    });
+
+    setCookieCount(cookieCount + 1);
   };
 
   return (
@@ -66,9 +70,11 @@ export default function App() {
       <h3>Network Request</h3>
       <p>Fetched Data: {data || "Loading..."}</p>
 
-      <h3>Cookies</h3>
+    <div>
+      <h2>Click the button to create a cookie</h2>
       <button onClick={setCookie}>Set Cookie</button>
-      <p>Stored Cookies: {cookieValue}</p>
+      <button onClick={() => alert(document.cookie)}>Show Cookies</button>
+    </div>
 
       <h3>Console Logging</h3>
       <button onClick={() => console.log("Console Test Log")}>
