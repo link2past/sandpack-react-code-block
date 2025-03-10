@@ -114,6 +114,12 @@ root.render(<App />);
 \`\`\`
 </file>
 
+<file name=".env">
+\`\`\`jsx
+const REACT_APP_API_URL = "REACT_APP_API_URL = "URL_ADDRESSplaceholder.typicode.com";
+\`\`\`
+</file>
+
 <file name="wrapper.js">
 \`\`\`jsx
 import React from "react";
@@ -150,6 +156,34 @@ export default function App() {
 </ReactCodeBlock>
 `;
 
+const SandpackConsole = React.memo(({ hideConsole }) => {
+  const [consoleExpanded, setConsoleExpanded] = React.useState(false);
+
+  const toggleConsole = React.useCallback((e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setConsoleExpanded((prev) => !prev);
+  }, []);
+
+  return (
+    <>
+      {!hideConsole && (
+        <ConsoleContainer expanded={consoleExpanded}>
+          <ConsoleHeader onClick={toggleConsole}>
+            <ConsoleTitle>Console</ConsoleTitle>
+            <ConsoleToggle>{consoleExpanded ? "▼" : "▲"}</ConsoleToggle>
+          </ConsoleHeader>
+          <ConsoleContent>
+            <StyledConsole />
+          </ConsoleContent>
+        </ConsoleContainer>
+      )}
+    </>
+  );
+});
+
 const ReactCodeBlock = () => {
   return (
     <Markdown
@@ -158,36 +192,29 @@ const ReactCodeBlock = () => {
           ReactCodeBlock: ({ children, ...props }) => {
             const attributes = props;
 
-            const files = {};
-            const [consoleExpanded, setConsoleExpanded] = React.useState(false);
-
-            const toggleConsole = () => {
-              setConsoleExpanded(!consoleExpanded);
-            };
-
-            React.Children.forEach(children, (child) => {
-              if (typeof child === "string") return;
-
-              if (child?.type === "file" && child?.props?.name) {
-                const fileName = child.props.name;
-
-                const preElement = React.Children.toArray(
-                  child.props.children
-                ).find((c) => c?.type === "pre");
-
-                if (preElement) {
-                  const codeElement = React.Children.toArray(
-                    preElement.props.children
-                  ).find((c) => c?.type === "code");
-
-                  if (codeElement) {
-                    files[`/${fileName}`] = codeElement.props.children;
+            const files = React.useMemo(() => {
+              const processedFiles = {};
+              React.Children.forEach(children, (child) => {
+                if (typeof child === "string") return;
+                if (child?.type === "file" && child?.props?.name) {
+                  const fileName = child.props.name;
+                  const preElement = React.Children.toArray(
+                    child.props.children
+                  ).find((c) => c?.type === "pre");
+                  if (preElement) {
+                    const codeElement = React.Children.toArray(
+                      preElement.props.children
+                    ).find((c) => c?.type === "code");
+                    if (codeElement) {
+                      processedFiles[`/${fileName}`] =
+                        codeElement.props.children;
+                    }
                   }
                 }
-              }
-            });
+              });
+              return processedFiles;
+            }, [children]);
 
-            // Calculate visibility conditions
             const hideFileExplorer =
               attributes.shouldShowFileExplorer === false;
             const hideEditor = attributes.shouldShowEditor === false;
@@ -206,6 +233,8 @@ const ReactCodeBlock = () => {
                   theme={attributes.theme || "dark"}
                   options={{
                     activeFile: attributes.activeFile || "App.js",
+                    recompileMode: "delayed",
+                    recompileDelay: 1000,
                   }}
                   customSetup={{
                     dependencies: JSON.parse(attributes.dependencies),
@@ -257,17 +286,7 @@ const ReactCodeBlock = () => {
                           }
                         />
                         {attributes.shouldShowConsole !== false && (
-                          <ConsoleContainer expanded={consoleExpanded}>
-                            <ConsoleHeader onClick={toggleConsole}>
-                              <ConsoleTitle>Console</ConsoleTitle>
-                              <ConsoleToggle>
-                                {consoleExpanded ? "▼" : "▲"}
-                              </ConsoleToggle>
-                            </ConsoleHeader>
-                            <ConsoleContent>
-                              <StyledConsole />
-                            </ConsoleContent>
-                          </ConsoleContainer>
+                          <SandpackConsole hideConsole={hideConsole} />
                         )}
                       </StyledPreviewContainer>
                     )}
