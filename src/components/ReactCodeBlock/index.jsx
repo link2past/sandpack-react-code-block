@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Markdown from "markdown-to-jsx";
+
+import Worker from "../../workers/reactCodeBlockWorker.worker.js";
 
 import { SandpackProvider } from "@codesandbox/sandpack-react";
 
@@ -185,35 +187,66 @@ const SandpackConsole = React.memo(({ hideConsole }) => {
 });
 
 const ReactCodeBlock = () => {
+  const [files, setFiles] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const workerRef = useRef(null);
+
+  useEffect(() => {
+    console.log("Initializing worker...");
+    workerRef.current = new Worker();
+
+    workerRef.current.onmessage = (event) => {
+      console.log("Received message from worker:", event.data);
+      const { status, processedFiles, error } = event.data;
+      
+      if (status === 'success') {
+        console.log("Files processed successfully:", Object.keys(processedFiles));
+        setFiles(processedFiles);
+        setIsLoading(false);
+      } else {
+        console.error("Worker error:", error);
+        setError(error);
+        setIsLoading(false);
+      }
+    };
+
+    // Add error handling for the worker
+    workerRef.current.onerror = (error) => {
+      console.error("Worker error:", error);
+      setError("Worker failed to initialize: " + error.message);
+      setIsLoading(false);
+    };
+
+    // Send the markdown to the worker for processing
+    console.log("Sending markdown to worker...");
+    workerRef.current.postMessage({
+      markdown,
+      options: {}
+    });
+
+    // Clean up the worker when the component unmounts
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+    };
+  }, []);
+
+  if (isLoading) {
+    return <div>Loading code blocks...</div>;
+  }
+
+  if (error) {
+    return <div>Error processing code blocks: {error}</div>;
+  }
+
   return (
     <Markdown
       options={{
         overrides: {
           ReactCodeBlock: ({ children, ...props }) => {
             const attributes = props;
-
-            const files = React.useMemo(() => {
-              const processedFiles = {};
-              React.Children.forEach(children, (child) => {
-                if (typeof child === "string") return;
-                if (child?.type === "file" && child?.props?.name) {
-                  const fileName = child.props.name;
-                  const preElement = React.Children.toArray(
-                    child.props.children
-                  ).find((c) => c?.type === "pre");
-                  if (preElement) {
-                    const codeElement = React.Children.toArray(
-                      preElement.props.children
-                    ).find((c) => c?.type === "code");
-                    if (codeElement) {
-                      processedFiles[`/${fileName}`] =
-                        codeElement.props.children;
-                    }
-                  }
-                }
-              });
-              return processedFiles;
-            }, [children]);
 
             const hideFileExplorer =
               attributes.shouldShowFileExplorer === false;
@@ -279,7 +312,7 @@ const ReactCodeBlock = () => {
                         fullwidth={showPreviewFullWidth}
                       >
                         <StyledPreview
-                          hideconsole={hideConsole}
+                          hideconsole={hideConsole ? "true" : "false"}
                           showNavigator={attributes.showNavigator}
                           showOpenInCodeSandbox={
                             attributes.showOpenInCodeSandbox

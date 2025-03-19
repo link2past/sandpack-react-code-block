@@ -6,6 +6,7 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, "dist"),
     filename: "bundle.js",
+    globalObject: "this" // Required for web workers
   },
   mode: "development",
   module: {
@@ -15,6 +16,15 @@ module.exports = {
         exclude: /node_modules/,
         use: "babel-loader",
       },
+      {
+        test: /\.worker\.js$/,
+        use: { 
+          loader: 'worker-loader',
+          options: { 
+            inline: 'no-fallback'
+          }
+        }
+      }
     ],
   },
   resolve: {
