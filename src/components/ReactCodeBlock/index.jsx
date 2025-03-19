@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Markdown from "markdown-to-jsx";
+
+import Worker from "../../workers/reactCodeBlockWorker.worker.js";
 
 import { SandpackProvider } from "@codesandbox/sandpack-react";
 
@@ -20,10 +22,11 @@ import {
 } from "./StyledComponents";
 
 const markdown = `
-<ReactCodeBlock shouldShowFileExplorer="true" shouldShowEditor="true" shouldShowPreview="true" shouldShowConsole="true" height="600px" width="100%" theme="dark" activeFile="App.js" readOnly="false" dependencies={{"react-router-dom": "6.20.1", "markdown-to-jsx": "^6.11.4"}} showReadOnly="false" showTabs="true" closableTabs="true" showLineNumbers="true" showInlineErrors="true" showRunButton="true" showNavigator="true" showOpenInCodeSandbox="false">
+<ReactCodeBlock shouldShowFileExplorer="true" shouldShowEditor="true" shouldShowPreview="true" shouldShowConsole="true" height="600px" width="100%" theme="dark" activeFile="App.js" readOnly="false" dependencies={{"react-router-dom": "6.20.1", "markdown-to-jsx": "^6.11.4","js-cookie":"3.0.5"}} showReadOnly="false" showTabs="true" closableTabs="true" showLineNumbers="true" showInlineErrors="true" showRunButton="true" showNavigator="true" showOpenInCodeSandbox="false">
 <file name="App.js">
 \`\`\`jsx
 import React, { useEffect, useState } from "react";
+import Cookies from "js-cookie";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 
 const Home = () => <h2>Home Page</h2>;
@@ -46,17 +49,20 @@ export default function App() {
       .catch((error) => console.error("Fetch Error:", error));
   }, []);
 
-  // Test Cookies Storage
-  const setCookie = () => {
-    document.cookie = "testCookie=HelloSandpack; path=/";
-    console.log("Cookie Set: testCookie=HelloSandpack");
-    checkCookies();
-  };
 
-  const checkCookies = () => {
-    const allCookies = document.cookie;
-    console.log("Current Cookies:", allCookies);
-    setCookieValue(allCookies);
+const [cookieCount, setCookieCount] = useState(1);
+  const setCookie = () => {
+    const cookieName = "myCookie" + cookieCount;
+    const cookieValue = "Value" + cookieCount;
+
+    Cookies.set(cookieName, cookieValue, {
+      expires: 1, // Expires in 1 day
+      path: "/",
+      sameSite: "None",
+      secure: true, // Required for SameSite=None
+    });
+
+    setCookieCount(cookieCount + 1);
   };
 
   return (
@@ -66,9 +72,11 @@ export default function App() {
       <h3>Network Request</h3>
       <p>Fetched Data: {data || "Loading..."}</p>
 
-      <h3>Cookies</h3>
+    <div>
+      <h2>Click the button to create a cookie</h2>
       <button onClick={setCookie}>Set Cookie</button>
-      <p>Stored Cookies: {cookieValue}</p>
+      <button onClick={() => alert(document.cookie)}>Show Cookies</button>
+    </div>
 
       <h3>Console Logging</h3>
       <button onClick={() => console.log("Console Test Log")}>
@@ -108,6 +116,12 @@ root.render(<App />);
 \`\`\`
 </file>
 
+<file name=".env">
+\`\`\`jsx
+const REACT_APP_API_URL = "REACT_APP_API_URL = "URL_ADDRESSplaceholder.typicode.com";
+\`\`\`
+</file>
+
 <file name="wrapper.js">
 \`\`\`jsx
 import React from "react";
@@ -144,7 +158,89 @@ export default function App() {
 </ReactCodeBlock>
 `;
 
+const SandpackConsole = React.memo(({ hideConsole }) => {
+  const [consoleExpanded, setConsoleExpanded] = React.useState(false);
+
+  const toggleConsole = React.useCallback((e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    setConsoleExpanded((prev) => !prev);
+  }, []);
+
+  return (
+    <>
+      {!hideConsole && (
+        <ConsoleContainer expanded={consoleExpanded}>
+          <ConsoleHeader onClick={toggleConsole}>
+            <ConsoleTitle>Console</ConsoleTitle>
+            <ConsoleToggle>{consoleExpanded ? "▼" : "▲"}</ConsoleToggle>
+          </ConsoleHeader>
+          <ConsoleContent>
+            <StyledConsole />
+          </ConsoleContent>
+        </ConsoleContainer>
+      )}
+    </>
+  );
+});
+
 const ReactCodeBlock = () => {
+  const [files, setFiles] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const workerRef = useRef(null);
+
+  useEffect(() => {
+    console.log("Initializing worker...");
+    workerRef.current = new Worker();
+
+    workerRef.current.onmessage = (event) => {
+      console.log("Received message from worker:", event.data);
+      const { status, processedFiles, error } = event.data;
+      
+      if (status === 'success') {
+        console.log("Files processed successfully:", Object.keys(processedFiles));
+        setFiles(processedFiles);
+        setIsLoading(false);
+      } else {
+        console.error("Worker error:", error);
+        setError(error);
+        setIsLoading(false);
+      }
+    };
+
+    // Add error handling for the worker
+    workerRef.current.onerror = (error) => {
+      console.error("Worker error:", error);
+      setError("Worker failed to initialize: " + error.message);
+      setIsLoading(false);
+    };
+
+    // Send the markdown to the worker for processing
+    console.log("Sending markdown to worker...");
+    workerRef.current.postMessage({
+      markdown,
+      options: {}
+    });
+
+    // Clean up the worker when the component unmounts
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+    };
+  }, []);
+
+  if (isLoading) {
+    return <div>Loading code blocks...</div>;
+  }
+
+  if (error) {
+    return <div>Error processing code blocks: {error}</div>;
+  }
+
   return (
     <Markdown
       options={{
@@ -152,36 +248,6 @@ const ReactCodeBlock = () => {
           ReactCodeBlock: ({ children, ...props }) => {
             const attributes = props;
 
-            const files = {};
-            const [consoleExpanded, setConsoleExpanded] = React.useState(false);
-
-            const toggleConsole = () => {
-              setConsoleExpanded(!consoleExpanded);
-            };
-
-            React.Children.forEach(children, (child) => {
-              if (typeof child === "string") return;
-
-              if (child?.type === "file" && child?.props?.name) {
-                const fileName = child.props.name;
-
-                const preElement = React.Children.toArray(
-                  child.props.children
-                ).find((c) => c?.type === "pre");
-
-                if (preElement) {
-                  const codeElement = React.Children.toArray(
-                    preElement.props.children
-                  ).find((c) => c?.type === "code");
-
-                  if (codeElement) {
-                    files[`/${fileName}`] = codeElement.props.children;
-                  }
-                }
-              }
-            });
-
-            // Calculate visibility conditions
             const hideFileExplorer =
               attributes.shouldShowFileExplorer === false;
             const hideEditor = attributes.shouldShowEditor === false;
@@ -200,6 +266,8 @@ const ReactCodeBlock = () => {
                   theme={attributes.theme || "dark"}
                   options={{
                     activeFile: attributes.activeFile || "App.js",
+                    recompileMode: "delayed",
+                    recompileDelay: 1000,
                   }}
                   customSetup={{
                     dependencies: JSON.parse(attributes.dependencies),
@@ -244,24 +312,14 @@ const ReactCodeBlock = () => {
                         fullwidth={showPreviewFullWidth}
                       >
                         <StyledPreview
-                          hideconsole={hideConsole}
+                          hideconsole={hideConsole ? "true" : "false"}
                           showNavigator={attributes.showNavigator}
                           showOpenInCodeSandbox={
                             attributes.showOpenInCodeSandbox
                           }
                         />
                         {attributes.shouldShowConsole !== false && (
-                          <ConsoleContainer expanded={consoleExpanded}>
-                            <ConsoleHeader onClick={toggleConsole}>
-                              <ConsoleTitle>Console</ConsoleTitle>
-                              <ConsoleToggle>
-                                {consoleExpanded ? "▼" : "▲"}
-                              </ConsoleToggle>
-                            </ConsoleHeader>
-                            <ConsoleContent>
-                              <StyledConsole />
-                            </ConsoleContent>
-                          </ConsoleContainer>
+                          <SandpackConsole hideConsole={hideConsole} />
                         )}
                       </StyledPreviewContainer>
                     )}
