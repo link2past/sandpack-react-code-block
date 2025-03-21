@@ -3,16 +3,12 @@ import Markdown from "markdown-to-jsx";
 
 import { SandpackProvider } from "@codesandbox/sandpack-react";
 
+import SandpackConsole from "../SandpackConsole";
+
 import {
   TopRow,
-  ConsoleTitle,
-  ConsoleHeader,
-  ConsoleToggle,
   StyledPreview,
-  StyledConsole,
-  ConsoleContent,
   StyledCodeEditor,
-  ConsoleContainer,
   SandpackContainer,
   StyledFileExplorer,
   StyledSandpackLayout,
@@ -155,34 +151,6 @@ export default function App() {
 
 </ReactCodeBlock>
 `;
-
-const SandpackConsole = React.memo(({ hideConsole }) => {
-  const [consoleExpanded, setConsoleExpanded] = React.useState(false);
-
-  const toggleConsole = React.useCallback((e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    setConsoleExpanded((prev) => !prev);
-  }, []);
-
-  return (
-    <>
-      {!hideConsole && (
-        <ConsoleContainer expanded={consoleExpanded}>
-          <ConsoleHeader onClick={toggleConsole}>
-            <ConsoleTitle>Console</ConsoleTitle>
-            <ConsoleToggle>{consoleExpanded ? "▼" : "▲"}</ConsoleToggle>
-          </ConsoleHeader>
-          <ConsoleContent>
-            <StyledConsole />
-          </ConsoleContent>
-        </ConsoleContainer>
-      )}
-    </>
-  );
-});
 
 const ReactCodeBlock = () => {
   return (
