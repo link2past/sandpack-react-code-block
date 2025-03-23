@@ -1,7 +1,8 @@
 self.onmessage = async (event) => {
-  const { markdown } = event.data;
+  const { markdown, origin } = event.data;
 
   console.log("[Worker] Received markdown:", markdown);
+  console.log("[Worker] Origin:", origin);
 
   try {
     const processedFiles = {};
@@ -77,6 +78,8 @@ self.onmessage = async (event) => {
           <title>Sandpack Worker Output</title>
           <script>
             console.log("[Iframe] Loading dependencies...");
+            // Store parent origin for secure communication
+            window.parentOrigin = "${origin || '*'}";
           </script>
           <script crossorigin src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
           <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
@@ -88,20 +91,41 @@ self.onmessage = async (event) => {
         <body>
           <div id="root"></div>
           <script>
-            console.log("[Iframe] Rendering App with props:", ${JSON.stringify(attributes)});
-            console.log("[Iframe] Rendering App with files:", ${JSON.stringify(processedFiles)});
-
             try {
+              const props = Object.assign({}, ${JSON.stringify(attributes)}, ${JSON.stringify(processedFiles)});
+              console.log("[Iframe] App type:", typeof App);
+              console.log("[Iframe] Props:", props);
+
+              const Component = typeof App === "function" ? App : (App?.default ?? null);
+              
+              if (typeof Component !== "function") {
+                throw new Error("App is not a valid React component: " + JSON.stringify(Component));
+              }
+
               ReactDOM.render(
-                React.createElement(App, ${JSON.stringify(attributes)}, ${JSON.stringify(processedFiles)}),
-                document.getElementById('root')
+                React.createElement(Component, props),
+                document.getElementById("root")
               );
+
               console.log("[Iframe] App rendered.");
+              
+              // Safely communicate with parent window
+              if (window.parent && window.parentOrigin) {
+                window.parent.postMessage({ type: "SANDBOX_READY" }, window.parentOrigin);
+              }
             } catch (e) {
               console.error("[Iframe] Render error:", e);
-              const errorEl = document.createElement("pre");
-              errorEl.textContent = "Render Error: " + e.message;
-              document.body.appendChild(errorEl);
+              const pre = document.createElement("pre");
+              pre.textContent = "Render Error: " + e.message;
+              document.body.appendChild(pre);
+              
+              // Report error to parent
+              if (window.parent && window.parentOrigin) {
+                window.parent.postMessage({ 
+                  type: "SANDBOX_ERROR", 
+                  error: e.message 
+                }, window.parentOrigin);
+              }
             }
           </script>
         </body>

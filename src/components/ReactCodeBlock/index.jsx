@@ -152,7 +152,9 @@ export default function App() {
 </ReactCodeBlock>
 `;
 
-const ReactCodeBlock = () => {
+const ReactCodeBlock = (props) => {
+
+  console.log("[App] Props received in component:", props); // 👈 Debug log
   return (
     <Markdown
       options={{
@@ -270,5 +272,10 @@ const ReactCodeBlock = () => {
     </Markdown>
   );
 };
+
+if (typeof window !== "undefined") {
+  window.App = ReactCodeBlock; // ✅ Directly attach the function
+}
+
 
 export default ReactCodeBlock;

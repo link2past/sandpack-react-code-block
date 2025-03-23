@@ -5,8 +5,6 @@ module.exports = {
   output: {
     path: path.resolve(__dirname, "public"),
     filename: "sandpackBundle.js",
-    library: "App",
-    libraryTarget: "umd",
   },
   mode: "production",
   optimization: {
@@ -20,6 +18,10 @@ module.exports = {
         use: "babel-loader",
       },
     ],
+  },
+  externals: {
+    react: "React",
+    "react-dom": "ReactDOM",
   },
   resolve: {
     extensions: [".js", ".jsx"],

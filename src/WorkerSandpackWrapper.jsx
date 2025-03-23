@@ -8,7 +8,7 @@ const WorkerSandpackWrapper = ({ markdownInput }) => {
     const worker = new Worker(new URL("./workers/sandpackWorker.js", import.meta.url));
 
     console.log("[Main] Posting markdown to worker...");
-    worker.postMessage({ markdown: markdownInput });
+    worker.postMessage({ markdown: markdownInput, origin: window.location.origin });
 
     worker.onmessage = (event) => {
       if (event.data.status === "success") {
