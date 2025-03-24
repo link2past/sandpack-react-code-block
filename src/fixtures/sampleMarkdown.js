@@ -45,6 +45,7 @@ const [cookieCount, setCookieCount] = useState(1);
   return (
     <div>
       <h2>Sandpack Testing</h2>
+      <h2>Testing build deployment</h2>
 
       <h3>Network Request</h3>
       <p>Fetched Data: {data || "Loading..."}</p>
