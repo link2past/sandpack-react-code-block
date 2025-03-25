@@ -61,7 +61,7 @@ export const StyledPreviewContainer = styled.div`
 
 export const StyledPreview = styled(SandpackPreview)`
   width: 100%;
-  height: calc(100% - 32px);
+  height: ${(props) => (props.hideconsole ? "100%" : "calc(100%-32px)")};
   position: relative;
 
   @media (max-width: 768px) {
